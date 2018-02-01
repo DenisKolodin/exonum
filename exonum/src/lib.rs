@@ -30,6 +30,7 @@ extern crate exonum_sodiumoxide as sodiumoxide;
 extern crate exonum_rocksdb as rocksdb;
 
 extern crate rand;
+extern crate semver;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

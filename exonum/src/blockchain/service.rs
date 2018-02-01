@@ -20,6 +20,7 @@ use std::sync::{Arc, RwLock};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 
+use semver::Version;
 use serde_json::Value;
 use iron::Handler;
 
@@ -211,6 +212,27 @@ pub trait Service: Send + Sync + 'static {
     }
 }
 
+/// Where the sevice bind to.
+#[derive(Debug, Clone)]
+pub struct Bind {
+    /// Name of the service.
+    name: String, // TODO Replace it to Id type which produces valid names (parses)
+    /// Version of the service.
+    version: Version,
+}
+
+impl Bind {
+    /// Returns name of the bind.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns version of the bind.
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+}
+
 /// The current node state on which the blockchain is running, or in other words
 /// execution context.
 #[derive(Debug)]
@@ -294,8 +316,8 @@ impl ServiceContext {
     }
 
     /// Returns service specific global variables as json value.
-    pub fn actual_service_config(&self, service: &Service) -> &Value {
-        &self.stored_configuration.services[service.service_name()]
+    pub fn actual_service_config(&self, bind: &Bind) -> &Value {
+        &self.stored_configuration.services[bind.name()]
     }
 
     /// Returns reference to the transaction sender.

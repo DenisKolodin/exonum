@@ -53,7 +53,7 @@ pub use self::block::{Block, BlockProof, SCHEMA_MAJOR_VERSION};
 pub use self::schema::{gen_prefix, Schema, TxLocation};
 pub use self::genesis::GenesisConfig;
 pub use self::config::{ConsensusConfig, StoredConfiguration, TimeoutAdjusterConfig, ValidatorKeys};
-pub use self::service::{ApiContext, Service, ServiceContext, SharedNodeState, Transaction};
+pub use self::service::{ApiContext, Bind, Service, ServiceContext, SharedNodeState, Transaction};
 
 mod block;
 mod schema;
@@ -69,7 +69,7 @@ pub mod config;
 /// into the single network.
 pub struct Blockchain {
     db: Arc<Database>,
-    service_map: Arc<Vec<Box<Service>>>,
+    service_map: Arc<Vec<(Bind, Box<Service>)>>,
     service_keypair: (PublicKey, SecretKey),
     api_sender: ApiSender,
 }
@@ -78,7 +78,7 @@ impl Blockchain {
     /// Constructs a blockchain for the given `storage` and list of `services`.
     pub fn new(
         storage: Box<Database>,
-        services: Vec<Box<Service>>,
+        services: Vec<(Bind, Box<Service>)>,
         service_public_key: PublicKey,
         service_secret_key: SecretKey,
         api_sender: ApiSender,
@@ -103,7 +103,7 @@ impl Blockchain {
     }
 
     /// Returns service `VecMap` for all our services.
-    pub fn service_map(&self) -> &Arc<Vec<Box<Service>>> {
+    pub fn service_map(&self) -> &Arc<Vec<(Bind, Box<Service>)>> {
         &self.service_map
     }
 
@@ -126,7 +126,7 @@ impl Blockchain {
     /// - Service can deserialize given raw message.
     pub fn tx_from_raw(&self, raw: RawMessage) -> Option<Box<Transaction>> {
         let id = raw.service_id() as usize;
-        self.service_map.get(id).and_then(|service| {
+        self.service_map.get(id).and_then(|&(_, ref service)| {
             service.tx_from_raw(raw).ok()
         })
     }
@@ -171,9 +171,9 @@ impl Blockchain {
         let patch = {
             let mut fork = self.fork();
             // Update service tables
-            for service in self.service_map.iter() {
+            for &(ref bind, ref service) in self.service_map.iter() {
                 let cfg = service.initialize(&mut fork);
-                let name = service.service_name();
+                let name = bind.name();
                 if config_propose.services.contains_key(name) {
                     panic!(
                         "Services already contain service with '{}' name, please change it",
@@ -277,7 +277,7 @@ impl Blockchain {
                         state_hashes.push((key, core_table_hash));
                     }
 
-                    for (id, service) in self.service_map.iter().enumerate() {
+                    for (id, &(_, ref service)) in self.service_map.iter().enumerate() {
                         let service_id = id as u16;
                         let vec_service_state = service.state_hash(&fork);
                         for (idx, service_table_hash) in vec_service_state.into_iter().enumerate() {
@@ -366,7 +366,7 @@ impl Blockchain {
             self.fork(),
         );
         // Invokes `handle_commit` for each service in order of their identifiers
-        for service in self.service_map.iter() {
+        for &(_, ref service) in self.service_map.iter() {
             service.handle_commit(&context);
         }
         Ok(())
@@ -376,9 +376,9 @@ impl Blockchain {
     pub fn mount_public_api(&self) -> Mount {
         let context = self.api_context();
         let mut mount = Mount::new();
-        for service in self.service_map.iter() {
+        for &(ref bind, ref service) in self.service_map.iter() {
             if let Some(handler) = service.public_api_handler(&context) {
-                mount.mount(service.service_name(), handler);
+                mount.mount(bind.name(), handler);
             }
         }
         mount
@@ -388,9 +388,9 @@ impl Blockchain {
     pub fn mount_private_api(&self) -> Mount {
         let context = self.api_context();
         let mut mount = Mount::new();
-        for service in self.service_map.iter() {
+        for &(ref bind, ref service) in self.service_map.iter() {
             if let Some(handler) = service.private_api_handler(&context) {
-                mount.mount(service.service_name(), handler);
+                mount.mount(bind.name(), handler);
             }
         }
         mount

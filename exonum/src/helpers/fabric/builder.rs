@@ -17,7 +17,7 @@ use std::panic::{self, PanicInfo};
 use std::ffi::OsString;
 use std::collections::HashMap;
 
-use blockchain::Service;
+use blockchain::{Bind, Service};
 use node::Node;
 
 use super::internal::{CollectedCommand, Feedback};
@@ -33,7 +33,7 @@ use super::CommandName;
 #[derive(Default)]
 pub struct NodeBuilder {
     commands: HashMap<CommandName, CollectedCommand>,
-    service_factories: Vec<Box<ServiceFactory>>,
+    service_factories: Vec<(Bind, Box<ServiceFactory>)>,
 }
 
 impl NodeBuilder {
@@ -46,13 +46,13 @@ impl NodeBuilder {
     }
 
     /// Appends service to the `NodeBuilder` context.
-    pub fn with_service(mut self, mut factory: Box<ServiceFactory>) -> NodeBuilder {
+    pub fn with_service(mut self, bind: Bind, mut factory: Box<ServiceFactory>) -> NodeBuilder {
         //TODO: take endpoints, etc... (ECR-164)
 
         for (name, command) in &mut self.commands {
             command.extend(factory.command(name))
         }
-        self.service_factories.push(factory);
+        self.service_factories.push((bind, factory));
         self
     }
 
@@ -74,9 +74,9 @@ impl NodeBuilder {
                 let config = ctx.get(keys::NODE_CONFIG).expect(
                     "could not find node_config",
                 );
-                let services: Vec<Box<Service>> = self.service_factories
+                let services: Vec<(Bind, Box<Service>)> = self.service_factories
                     .into_iter()
-                    .map(|mut factory| factory.make_service(ctx))
+                    .map(|(bind, mut factory)| (bind.clone(), factory.make_service(ctx)))
                     .collect();
                 let node = Node::new(db, services, config);
                 Some(node)

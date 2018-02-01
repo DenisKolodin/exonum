@@ -36,7 +36,7 @@ use futures::sync::mpsc;
 use tokio_core::reactor::Core;
 
 use crypto::{self, Hash, PublicKey, SecretKey};
-use blockchain::{Blockchain, GenesisConfig, Schema, SharedNodeState, Transaction, Service};
+use blockchain::{Blockchain, GenesisConfig, Schema, SharedNodeState, Transaction, Bind, Service};
 use api::{private, public, Api};
 use messages::{Connect, Message, RawMessage};
 use events::{NetworkRequest, TimeoutRequest, NetworkEvent, InternalRequest, InternalEvent,
@@ -739,7 +739,7 @@ impl NodeChannel {
 
 impl Node {
     /// Creates node for the given services and node configuration.
-    pub fn new(db: Box<Database>, services: Vec<Box<Service>>, node_cfg: NodeConfig) -> Self {
+    pub fn new(db: Box<Database>, services: Vec<(Bind, Box<Service>)>, node_cfg: NodeConfig) -> Self {
         crypto::init();
 
         if cfg!(feature = "flame_profile") {

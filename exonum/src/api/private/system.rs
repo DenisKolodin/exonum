@@ -21,7 +21,7 @@ use params::{Params, Value as ParamsValue};
 
 use crypto::PublicKey;
 use node::ApiSender;
-use blockchain::{Service, Blockchain, SharedNodeState};
+use blockchain::{Bind, Service, Blockchain, SharedNodeState};
 use api::{Api, ApiError};
 use messages::{TEST_NETWORK_ID, PROTOCOL_MAJOR_VERSION};
 
@@ -43,7 +43,7 @@ impl NodeInfo {
     /// Creates new `NodeInfo`, from services list.
     pub fn new<'a, I>(services: I) -> NodeInfo
     where
-        I: IntoIterator<Item = &'a Box<Service>>,
+        I: IntoIterator<Item = &'a (Bind, Box<Service>)>,
     {
         NodeInfo {
             network_id: TEST_NETWORK_ID,
@@ -51,9 +51,9 @@ impl NodeInfo {
             services: services
                 .into_iter()
                 .enumerate()
-                .map(|(id, s)| {
+                .map(|(id, &(ref bind, _))| {
                     ServiceInfo {
-                        name: s.service_name().to_owned(),
+                        name: bind.name().to_owned(),
                         id: id as u16,
                     }
                 })
