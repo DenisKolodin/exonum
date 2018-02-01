@@ -378,7 +378,8 @@ impl Blockchain {
         let mut mount = Mount::new();
         for &(ref bind, ref service) in self.service_map.iter() {
             if let Some(handler) = service.public_api_handler(&context) {
-                mount.mount(bind.name(), handler);
+                let path = format!("{}/{}", bind.name(), bind.version());
+                mount.mount(&path, handler);
             }
         }
         mount
@@ -390,7 +391,8 @@ impl Blockchain {
         let mut mount = Mount::new();
         for &(ref bind, ref service) in self.service_map.iter() {
             if let Some(handler) = service.private_api_handler(&context) {
-                mount.mount(bind.name(), handler);
+                let path = format!("{}/{}", bind.name(), bind.version());
+                mount.mount(&path, handler);
             }
         }
         mount
