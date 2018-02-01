@@ -153,12 +153,15 @@ pub trait Transaction: Message + ExonumJson + 'static {
 /// [doc:services]: https://exonum.com/doc/architecture/services/
 #[allow(unused_variables, unused_mut)]
 pub trait Service: Send + Sync + 'static {
+
+    /*
     /// Service identifier for database schema and service messages.
     /// Must be unique within the blockchain.
     fn service_id(&self) -> u16;
 
     /// Human-readable service name. Must be unique within the blockchain.
     fn service_name(&self) -> &'static str;
+    */
 
     /// Returns a list of root hashes of tables that determine the current state
     /// of the service database. These hashes are collected from all services in a common

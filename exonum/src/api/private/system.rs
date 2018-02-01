@@ -50,10 +50,11 @@ impl NodeInfo {
             protocol_version: PROTOCOL_MAJOR_VERSION,
             services: services
                 .into_iter()
-                .map(|s| {
+                .enumerate()
+                .map(|(id, s)| {
                     ServiceInfo {
                         name: s.service_name().to_owned(),
-                        id: s.service_id(),
+                        id: id as u16,
                     }
                 })
                 .collect(),

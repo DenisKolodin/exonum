@@ -40,7 +40,6 @@ use std::fmt;
 use std::panic;
 use std::net::SocketAddr;
 
-use vec_map::VecMap;
 use byteorder::{ByteOrder, LittleEndian};
 use mount::Mount;
 
@@ -70,7 +69,7 @@ pub mod config;
 /// into the single network.
 pub struct Blockchain {
     db: Arc<Database>,
-    service_map: Arc<VecMap<Box<Service>>>,
+    service_map: Arc<Vec<Box<Service>>>,
     service_keypair: (PublicKey, SecretKey),
     api_sender: ApiSender,
 }
@@ -84,17 +83,7 @@ impl Blockchain {
         service_secret_key: SecretKey,
         api_sender: ApiSender,
     ) -> Blockchain {
-        let mut service_map = VecMap::new();
-        for service in services {
-            let id = service.service_id() as usize;
-            if service_map.contains_key(id) {
-                panic!(
-                    "Services have already contain service with id={}, please change it.",
-                    id
-                );
-            }
-            service_map.insert(id, service);
-        }
+        let service_map = services;
 
         Blockchain {
             db: storage.into(),
@@ -114,7 +103,7 @@ impl Blockchain {
     }
 
     /// Returns service `VecMap` for all our services.
-    pub fn service_map(&self) -> &Arc<VecMap<Box<Service>>> {
+    pub fn service_map(&self) -> &Arc<Vec<Box<Service>>> {
         &self.service_map
     }
 
@@ -182,7 +171,7 @@ impl Blockchain {
         let patch = {
             let mut fork = self.fork();
             // Update service tables
-            for (_, service) in self.service_map.iter() {
+            for service in self.service_map.iter() {
                 let cfg = service.initialize(&mut fork);
                 let name = service.service_name();
                 if config_propose.services.contains_key(name) {
@@ -288,8 +277,8 @@ impl Blockchain {
                         state_hashes.push((key, core_table_hash));
                     }
 
-                    for service in self.service_map.values() {
-                        let service_id = service.service_id();
+                    for (id, service) in self.service_map.iter().enumerate() {
+                        let service_id = id as u16;
                         let vec_service_state = service.state_hash(&fork);
                         for (idx, service_table_hash) in vec_service_state.into_iter().enumerate() {
                             let key = Blockchain::service_table_unique_key(service_id, idx);
@@ -377,7 +366,7 @@ impl Blockchain {
             self.fork(),
         );
         // Invokes `handle_commit` for each service in order of their identifiers
-        for service in self.service_map.values() {
+        for service in self.service_map.iter() {
             service.handle_commit(&context);
         }
         Ok(())
@@ -387,7 +376,7 @@ impl Blockchain {
     pub fn mount_public_api(&self) -> Mount {
         let context = self.api_context();
         let mut mount = Mount::new();
-        for service in self.service_map.values() {
+        for service in self.service_map.iter() {
             if let Some(handler) = service.public_api_handler(&context) {
                 mount.mount(service.service_name(), handler);
             }
@@ -399,7 +388,7 @@ impl Blockchain {
     pub fn mount_private_api(&self) -> Mount {
         let context = self.api_context();
         let mut mount = Mount::new();
-        for service in self.service_map.values() {
+        for service in self.service_map.iter() {
             if let Some(handler) = service.private_api_handler(&context) {
                 mount.mount(service.service_name(), handler);
             }

@@ -975,7 +975,7 @@ pub fn create_private_api_handler(
     mount.mount("api/services", blockchain.mount_private_api());
 
     let mut router = Router::new();
-    let node_info = private::NodeInfo::new(blockchain.service_map().iter().map(|(_, s)| s));
+    let node_info = private::NodeInfo::new(blockchain.service_map().iter());
     let system_api = private::SystemApi::new(node_info, blockchain, shared_api_state, api_sender);
     system_api.wire(&mut router);
     mount.mount("api/system", router);
