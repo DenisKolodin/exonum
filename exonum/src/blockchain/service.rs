@@ -223,6 +223,14 @@ pub struct Bind {
 
 impl Bind {
     /// Returns name of the bind.
+    pub fn new(name: &str, version: &str) -> Result<Bind, ()> {
+        let name = name.to_owned();
+        let version = Version::parse(version).map_err(drop)?;
+        let bind = Bind { name, version };
+        Ok(bind)
+    }
+
+    /// Returns name of the bind.
     pub fn name(&self) -> &str {
         &self.name
     }

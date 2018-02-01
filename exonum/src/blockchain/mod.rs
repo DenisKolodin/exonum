@@ -173,8 +173,8 @@ impl Blockchain {
             // Update service tables
             for &(ref bind, ref service) in self.service_map.iter() {
                 let cfg = service.initialize(&mut fork);
-                let name = bind.name();
-                if config_propose.services.contains_key(name) {
+                let name = format!("{}-{}", bind.name(), bind.version());
+                if config_propose.services.contains_key(&name) {
                     panic!(
                         "Services already contain service with '{}' name, please change it",
                         name
